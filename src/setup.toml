@@ -1,0 +1,36 @@
+[pkgm]
+rule = "strict"
+
+[pkgm.xbps]
+packages = [
+  "git",
+  "htop",
+  "neofetch",
+]
+
+[pkgm.appimage]
+packages = [ "Obsidian" ]
+
+# [general]
+# username = "Michael"
+# hostname = "voidland"
+# init = "runit"
+# distro = "void"
+
+
+# [service]
+# rule = "strict"
+
+# [service.ssh]
+# enable = true
+# change.PermitRootLogin = "no"
+# change.Port = 20123
+
+# [service.ufw]
+# enable = true
+# changes.Accept = [
+#   22,
+#   200,
+#   80
+# ]
+
