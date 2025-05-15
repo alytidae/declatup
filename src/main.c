@@ -5,41 +5,105 @@
 
 #include "tomlc17.h"
 
-static void error(const char *msg, const char *msg1) {
-  fprintf(stderr, "ERROR: %s%s\n", msg, msg1 ? msg1 : "");
-  exit(1);
-}
-
 char* available_package_managers[] = {"xbps", "appimage", "pacman", "portage", "apt"};
 
-void install_package(const char *pkgm, const char *package){
-    printf("%s\n",package);
+static void error(const char *msg, const char *msg1) {
+    fprintf(stderr, "ERROR: %s%s\n", msg, msg1 ? msg1 : "");
+    exit(1);
+}
+
+void install_package_xbps(const char* name){
+    printf("Installing package %s with xbps\n", name);
+
     pid_t pid = fork();
 
-    if (pid==0) { /* child process */
+    if (pid==0) { 
+        const char *argv[]={"xbps-install","-Sy", name, NULL};
 
-        if (pkgm == "xbps"){
-            printf("Installing\n");
-            char *argv[]={"xbps-install","-Sy", package, NULL};
-            execvp("xbps-install", argv);
-        }else{
-            printf("Package manager is not implemented!\n");
-        }
+        #ifdef PROD
+        execvp("xbps-install", argv);
+        #else
+        printf("DEGUB: Installed package %s in debug mode\n", name);
+        #endif
 
-        exit(127); /* only if execv fails */
+        exit(127); 
     }
-    else { /* pid!=0; parent process */
-        waitpid(pid,0,0); /* wait for child to exit */
+    else { 
+        waitpid(pid,0,0);
+    }
+}
+
+void removed_package_xbps(const char* name){
+    printf("Removing package %s with xbps\n", name);
+
+    pid_t pid = fork();
+
+    if (pid==0) { 
+        const char *argv[]={"xbps-remove","-Ry", name, NULL};
+
+        #ifdef PROD
+        execvp("xbps-remove", argv);
+        #else
+        printf("DEGUB: Removed package %s in debug mode\n", name);
+        #endif
+
+        exit(127); 
+    }
+    else { 
+        waitpid(pid,0,0);
+    }
+}
+
+void update_packages_xbps(){
+    printf("Updating all packages with xbps\n");
+
+    pid_t pid = fork();
+
+    if (pid==0) { 
+        const char *argv[]={"xbps-install","-Suy", NULL};
+
+        #ifdef PROD
+        execvp("xbps-install", argv);
+        #else
+        printf("DEGUB: Update packages in debug mode\n");
+        #endif
+
+        exit(127); 
+    }
+    else { 
+        waitpid(pid,0,0);
+    }
+}
+
+void install_package(const char *pkgm, const char *name){
+    if (pkgm == "xbps"){
+        install_package_xbps(name);
+    }else if (pkgm == "appimage"){
+        // install_package_appimage(name);
+    }else if (pkgm == "pacman"){
+        // insatll_package_pacman(name);
+    }else if (pkgm == "portage"){
+        // install_package_portage(name);
+    }else if (pkgm == "apt"){
+        // install_package_apt(name);
+    }else{
+        printf("Package manager is not implemented!\n");
     }
 }
 
 
 
 int main(){
-    // if (geteuid() != 0) {
-    //     fprintf(stderr, "This program must be run as root.\n");
-    //     exit(EXIT_FAILURE);
-    // }
+
+
+    #ifdef PROD
+    if (geteuid() != 0) {
+        fprintf(stderr, "This program must be run as root.\n");
+        exit(EXIT_FAILURE);
+    }
+    #else
+    printf("DEGUB: Launched in debug mode.\n");
+    #endif
 
     // Parse the toml file
     toml_result_t result = toml_parse_file_ex("setup.toml");
@@ -50,21 +114,22 @@ int main(){
     }    
 
     // Extract values
-    toml_datum_t general  = toml_table_find(result.toptab, "general");
-    toml_datum_t username = toml_table_find(general, "username");
-    toml_datum_t hostname = toml_table_find(general, "hostname");
-    toml_datum_t init     = toml_table_find(general, "init");
-    toml_datum_t distro   = toml_table_find(general, "distro");
+    // toml_datum_t general  = toml_table_find(result.toptab, "general");
+    // toml_datum_t username = toml_table_find(general, "username");
+    // toml_datum_t hostname = toml_table_find(general, "hostname");
+    // toml_datum_t init     = toml_table_find(general, "init");
+    // toml_datum_t distro   = toml_table_find(general, "distro");
 
-    if (username.type != TOML_STRING) {
-        error("missing or invalid 'general.username' property in config", 0);
-    }
+    // if (username.type != TOML_STRING) {
+    //     error("missing or invalid 'general.username' property in config", 0);
+    // }
 
-    printf("%s | %s | %s | %s\n", username.u.s, hostname.u.s, init.u.s, distro.u.s);
+    // printf("%s | %s | %s | %s\n", username.u.s, hostname.u.s, init.u.s, distro.u.s);
     
     toml_datum_t all_package_managers = toml_table_find(result.toptab, "pkgm");
 
-    for (int i = 0; i < 5; ++i){
+    int available_package_managers_size =  sizeof(available_package_managers) / sizeof(available_package_managers[0]);
+    for (int i = 0; i < available_package_managers_size; ++i){
         toml_datum_t package_manager = toml_table_find(all_package_managers, available_package_managers[i]);
         if (package_manager.type != TOML_TABLE){
             //TODO: Describe it
@@ -83,31 +148,10 @@ int main(){
             if (elem.type != TOML_STRING) {
                 error("pkg.packages element not an string", 0);
             }
-            // install_package("xbps", elem.u.s);
 
-            printf("%s\n", elem.u.s);
+            install_package(available_package_managers[i], elem.u.s);
         }
     }
-
-
-
-    // printf("%s", pkgm.type == TOML_TABLE);
-
-    // toml_datum_t xbps     = toml_table_find(pkg.toptab, "xbps");
-    // toml_datum_t packages = toml_table_find(xbps, "packages");
-
-    // if (packages.type != TOML_ARRAY) {
-    //     error("missing or invalid 'pkg.packages' property in config", 0);
-    // }
-
-    // for (int i = 0; i < packages.u.arr.size; i++) {
-    //     toml_datum_t elem = packages.u.arr.elem[i];
-    //     if (elem.type != TOML_STRING) {
-    //         error("pkg.packages element not an string", 0);
-    //     }
-    //     // printf("%s\n", elem.u.s);
-    //     install_package("xbps", elem.u.s);
-    // }
 
     toml_free(result);
 
