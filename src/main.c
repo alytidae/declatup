@@ -7,6 +7,11 @@
 
 char* available_package_managers[] = {"xbps", "appimage", "pacman", "portage", "apt"};
 
+typedef struct {
+    char* name;
+    char* version;
+} Package;
+
 static void error(const char *msg, const char *msg1) {
     fprintf(stderr, "ERROR: %s%s\n", msg, msg1 ? msg1 : "");
     exit(1);
@@ -75,6 +80,26 @@ void update_packages_xbps(){
     }
 }
 
+void collect_dependencies_xbps(const char* name, Package* packages){
+    FILE *fp;
+    char buffer[4096];
+
+    char command[256];
+    snprintf(command, sizeof(command), "xbps-query -Rx %s", name);
+
+    fp = popen(command, "r");
+    if (fp == NULL) {
+        perror("popen failed");
+        exit(127); 
+    }
+
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        printf(">>> %s", buffer); 
+    }
+
+    pclose(fp);
+}
+
 void install_package(const char *pkgm, const char *name){
     if (pkgm == "xbps"){
         install_package_xbps(name);
@@ -92,10 +117,7 @@ void install_package(const char *pkgm, const char *name){
 }
 
 
-
 int main(){
-
-
     #ifdef PROD
     if (geteuid() != 0) {
         fprintf(stderr, "This program must be run as root.\n");
@@ -141,15 +163,20 @@ int main(){
             error("missing or invalid 'packages' property in config", 0);
         }
 
-        printf("%s\n", available_package_managers[i]);
+        printf("---%s---\n", available_package_managers[i]);
+
+        // TODO: Lol 5k, solve later
+        Package dependencies[5000]; 
 
         for (int j = 0; j < packages.u.arr.size; ++j){
             toml_datum_t elem = packages.u.arr.elem[j];
             if (elem.type != TOML_STRING) {
                 error("pkg.packages element not an string", 0);
             }
+            
+            collect_dependencies_xbps(elem.u.s, dependencies);
 
-            install_package(available_package_managers[i], elem.u.s);
+            // install_package(available_package_managers[i], elem.u.s);
         }
     }
 
