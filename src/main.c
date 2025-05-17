@@ -2,6 +2,7 @@
 #include <unistd.h> /* for fork */
 #include <sys/types.h> /* for pid_t */
 #include <sys/wait.h> /* for wait */
+#include <string.h>
 
 #include "tomlc17.h"
 
@@ -100,16 +101,59 @@ void collect_dependencies_xbps(const char* name, Package* packages){
     pclose(fp);
 }
 
+int get_all_packages_xbps(Package* packages){
+    FILE *fp;
+    char buffer[256];
+    int i = 0;
+
+    fp = popen("xbps-query -l", "r");
+    if (fp == NULL) {
+        perror("popen failed");
+        exit(127); 
+    }
+
+    // Example:
+    // ii git-2.49.0_1                            Git Tree History Storage Tool
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        char *name = buffer + 3;
+        char *stop = name;
+
+        while(*stop != '\0' && *stop != '\n'){
+            if (*stop == ' '){
+                break;
+            }
+            stop++;
+        }
+
+        char *version = stop;
+        while(*version != '-'){
+            version--;
+        }
+
+        *stop = '\0';
+        *version = '\0';
+        version = &version[1];
+
+        Package package;
+        package.name = strdup(name);
+        package.version = strdup(version);
+        packages[i++] = package;        
+    }
+
+    pclose(fp);
+    return i;
+}
+
 void install_package(const char *pkgm, const char *name){
-    if (pkgm == "xbps"){
+    if (strcmp(pkgm, "xbps") == 0){
         install_package_xbps(name);
-    }else if (pkgm == "appimage"){
+    }else if (strcmp(pkgm, "appimage") == 0){
         // install_package_appimage(name);
-    }else if (pkgm == "pacman"){
+    }else if (strcmp(pkgm, "pacman") == 0){
         // insatll_package_pacman(name);
-    }else if (pkgm == "portage"){
+    }else if (strcmp(pkgm, "portage") == 0){
         // install_package_portage(name);
-    }else if (pkgm == "apt"){
+    }else if (strcmp(pkgm, "apt") == 0){
         // install_package_apt(name);
     }else{
         printf("Package manager is not implemented!\n");
