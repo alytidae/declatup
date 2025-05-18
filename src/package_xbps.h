@@ -1,5 +1,5 @@
-#ifndef PACKAGE_XBPS
-#define PACKAGE_XBPS
+#ifndef PACKAGE_XBPS_H
+#define PACKAGE_XBPS_H
 
 typedef struct {
     char* name;
