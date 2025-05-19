@@ -4,9 +4,9 @@
 #include <argp.h>
 
 struct arguments {
-    char *init_arg;
-    char *sync_arg;
-    char *show_arg;
+    int init_flag;
+    int sync_flag;
+    int show_flag;
 };
 
 void parse_args(int argc, char **argv, struct arguments *args);

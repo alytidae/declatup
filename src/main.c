@@ -37,9 +37,9 @@ void install_package(const char *pkgm, const char *name){
 int main(int argc, char *argv[]){
     
     struct arguments args = {
-        .init_arg = NULL,
-        .sync_arg = NULL,
-        .show_arg = NULL
+        .init_flag = 0,
+        .sync_flag = 0,
+        .show_flag = 0
     };
 
     parse_args(argc, argv, &args);
